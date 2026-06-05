@@ -63,12 +63,14 @@ export default function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
+  function loadData() {
     fetch("/api/dashboard")
       .then((r) => r.json())
       .then((d) => { setData(d); setLoading(false) })
       .catch(() => setLoading(false))
-  }, [])
+  }
+
+  useEffect(() => { loadData() }, [])
 
   if (loading) {
     return (
@@ -94,7 +96,7 @@ export default function Dashboard() {
 
   return (
     <div style={{ backgroundColor: "#0f172a" }} className="min-h-screen">
-      <Header lastSync={data.lastSync} />
+      <Header lastSync={data.lastSync} onSyncComplete={loadData} />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
 
         {/* KPI Row */}
