@@ -7,9 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "db:generate": "drizzle-kit generate",
+    "db:generate": "npx drizzle-kit generate",
     "db:migrate": "npx tsx src/db/migrate.ts",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "npx drizzle-kit studio"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
