@@ -9,9 +9,15 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const { accountsSynced, transactionsImported } = await runSync(2)
-  const categorized = await categorizePendingTransactions()
-  const billsMatched = await matchBillsToTransactions()
-
-  return NextResponse.json({ accountsSynced, transactionsImported, categorized, billsMatched })
+  try {
+    const { accountsSynced, transactionsImported } = await runSync(2)
+    const categorized = await categorizePendingTransactions()
+    const billsMatched = await matchBillsToTransactions()
+    return NextResponse.json({ accountsSynced, transactionsImported, categorized, billsMatched })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    const stack = err instanceof Error ? err.stack : undefined
+    console.error("Sync error:", err)
+    return NextResponse.json({ error: message, stack }, { status: 500 })
+  }
 }
