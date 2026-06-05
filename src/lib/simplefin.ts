@@ -26,15 +26,29 @@ interface SimpleFINResponse {
 }
 
 export async function fetchSimpleFINData(startDate?: Date): Promise<SimpleFINResponse> {
-  const baseUrl = process.env.SIMPLEFIN_ACCESS_URL
-  if (!baseUrl) throw new Error("SIMPLEFIN_ACCESS_URL is not set")
+  const accessUrl = process.env.SIMPLEFIN_ACCESS_URL
+  if (!accessUrl) throw new Error("SIMPLEFIN_ACCESS_URL is not set")
 
-  const url = new URL(`${baseUrl}/accounts`)
+  // Parse credentials out of URL — Node.js fetch blocks URLs with embedded credentials
+  const parsed = new URL(accessUrl)
+  const username = parsed.username
+  const password = parsed.password
+  parsed.username = ""
+  parsed.password = ""
+
+  // Append /accounts if not already present
+  const base = parsed.toString().replace(/\/$/, "")
+  const url = new URL(`${base}/accounts`)
   if (startDate) {
     url.searchParams.set("start-date", Math.floor(startDate.getTime() / 1000).toString())
   }
 
-  const res = await fetch(url.toString())
+  const headers: Record<string, string> = {}
+  if (username || password) {
+    headers["Authorization"] = `Basic ${Buffer.from(`${username}:${password}`).toString("base64")}`
+  }
+
+  const res = await fetch(url.toString(), { headers })
   if (!res.ok) throw new Error(`SimpleFIN request failed: ${res.status} ${res.statusText}`)
 
   const data: SimpleFINResponse = await res.json()
