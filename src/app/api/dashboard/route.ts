@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic"
 import { NextResponse } from "next/server"
 import { db } from "@/db"
 import { accounts, transactions, sync_log } from "@/db/schema"

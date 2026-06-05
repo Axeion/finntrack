@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic"
 import { NextRequest, NextResponse } from "next/server"
 import { validateBotSecret } from "@/lib/cron-auth"
 import { getCashFlowPlan } from "@/lib/bills"
