@@ -17,6 +17,7 @@ const NAV_LINKS = [
   { href: "/insights", label: "Insights" },
   { href: "/bills", label: "Bills" },
   { href: "/rules", label: "Rules" },
+  { href: "/settings", label: "Settings" },
 ]
 
 export default function Header({ lastSync, onSyncComplete }: HeaderProps) {

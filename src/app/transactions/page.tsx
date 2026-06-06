@@ -18,6 +18,156 @@ interface Transaction {
 
 interface SplitEntry { category: string; amount: string; note: string }
 
+function TransactionEditModal({
+  txn, onClose, onSaved, onDeleted,
+}: {
+  txn: Transaction
+  onClose: () => void
+  onSaved: (updated: Transaction) => void
+  onDeleted: (id: string) => void
+}) {
+  const [payee, setPayee] = useState(txn.payee)
+  const [memo, setMemo] = useState(txn.memo ?? "")
+  const [category, setCategory] = useState(txn.category ?? "")
+  const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [related, setRelated] = useState<Transaction[]>([])
+  const [loadingRelated, setLoadingRelated] = useState(true)
+
+  useEffect(() => {
+    fetch(`/api/transactions/${txn.id}`)
+      .then((r) => r.json())
+      .then((d) => { setRelated(d.related ?? []); setLoadingRelated(false) })
+      .catch(() => setLoadingRelated(false))
+  }, [txn.id])
+
+  async function save() {
+    setSaving(true)
+    const res = await fetch(`/api/transactions/${txn.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ payee: payee.trim(), memo: memo.trim() || null, category: category || null }),
+    })
+    const updated = await res.json()
+    setSaving(false)
+    if (res.ok) onSaved(updated)
+  }
+
+  async function deleteTransaction() {
+    if (!confirmDelete) { setConfirmDelete(true); return }
+    setDeleting(true)
+    await fetch(`/api/transactions/${txn.id}`, { method: "DELETE" })
+    onDeleted(txn.id)
+  }
+
+  const amount = parseFloat(txn.amount)
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-16 overflow-y-auto" style={{ backgroundColor: "rgba(0,0,0,0.7)" }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}>
+      <div className="rounded-xl w-full max-w-lg space-y-0 overflow-hidden" style={{ backgroundColor: "#1e293b" }}>
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-slate-700 flex items-start justify-between">
+          <div>
+            <p className="text-xs text-slate-500">{new Date(txn.posted).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</p>
+            <p className="text-lg font-semibold text-white mt-0.5">{txn.payee}</p>
+            <p className="text-sm font-medium mt-0.5" style={{ fontFamily: "var(--font-mono)", color: amount < 0 ? "#f43f5e" : "#10b981" }}>
+              {amount < 0 ? "-" : "+"}${Math.abs(amount).toFixed(2)}
+            </p>
+          </div>
+          <button onClick={onClose} className="text-slate-500 hover:text-white cursor-pointer text-xl leading-none mt-1">×</button>
+        </div>
+
+        {/* Edit fields */}
+        <div className="px-6 py-5 space-y-4">
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">Payee</label>
+            <input value={payee} onChange={(e) => setPayee(e.target.value)}
+              className="w-full px-3 py-2 rounded-md text-sm bg-slate-700 text-slate-200 border border-slate-600 focus:outline-none focus:border-emerald-500" />
+          </div>
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">Memo</label>
+            <input value={memo} onChange={(e) => setMemo(e.target.value)} placeholder="Add a note…"
+              className="w-full px-3 py-2 rounded-md text-sm bg-slate-700 text-slate-200 border border-slate-600 focus:outline-none focus:border-emerald-500" />
+          </div>
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">Category</label>
+            <select value={category} onChange={(e) => setCategory(e.target.value)}
+              className="w-full px-3 py-2 rounded-md text-sm bg-slate-700 text-slate-200 border border-slate-600 focus:outline-none focus:border-emerald-500 cursor-pointer">
+              <option value="">Uncategorized</option>
+              {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+
+          <div className="flex gap-3 pt-1">
+            <button onClick={save} disabled={saving}
+              className="flex-1 py-2 rounded-md text-sm text-white font-medium disabled:opacity-50 cursor-pointer"
+              style={{ backgroundColor: "#10b981" }}>
+              {saving ? "Saving…" : "Save Changes"}
+            </button>
+            <button onClick={onClose}
+              className="px-4 py-2 rounded-md text-sm text-slate-400 hover:text-white cursor-pointer border border-slate-600">
+              Cancel
+            </button>
+          </div>
+
+          <div className="border-t border-slate-700 pt-3">
+            {confirmDelete ? (
+              <div className="flex items-center gap-3">
+                <p className="text-xs text-red-400 flex-1">Delete this transaction permanently?</p>
+                <button onClick={deleteTransaction} disabled={deleting}
+                  className="px-3 py-1.5 rounded text-xs text-white cursor-pointer disabled:opacity-50"
+                  style={{ backgroundColor: "#f43f5e" }}>
+                  {deleting ? "Deleting…" : "Confirm Delete"}
+                </button>
+                <button onClick={() => setConfirmDelete(false)} className="text-xs text-slate-500 hover:text-white cursor-pointer">Cancel</button>
+              </div>
+            ) : (
+              <button onClick={() => setConfirmDelete(true)}
+                className="text-xs text-slate-500 hover:text-red-400 transition-colors cursor-pointer">
+                Delete transaction
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Related transactions */}
+        <div className="border-t border-slate-700">
+          <div className="px-6 py-3">
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Other transactions from this payee</p>
+          </div>
+          {loadingRelated ? (
+            <div className="px-6 pb-4 text-xs text-slate-500">Loading…</div>
+          ) : related.length === 0 ? (
+            <div className="px-6 pb-4 text-xs text-slate-500">No other transactions found.</div>
+          ) : (
+            <div className="max-h-48 overflow-y-auto">
+              {related.map((r, i) => {
+                const a = parseFloat(r.amount)
+                return (
+                  <div key={r.id} className="flex items-center justify-between px-6 py-2 border-b border-slate-700/40 last:border-0"
+                    style={{ backgroundColor: i % 2 === 1 ? "#162032" : undefined }}>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="text-xs text-slate-500 shrink-0">
+                        {new Date(r.posted).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                      </span>
+                      <CategoryPill category={r.category} />
+                    </div>
+                    <span className="text-xs shrink-0" style={{ fontFamily: "var(--font-mono)", color: a < 0 ? "#f43f5e" : "#10b981" }}>
+                      {a < 0 ? "-" : "+"}${Math.abs(a).toFixed(2)}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function SplitModal({ txn, onClose, onSaved }: { txn: Transaction; onClose: () => void; onSaved: () => void }) {
   const total = Math.abs(parseFloat(txn.amount))
   const [splits, setSplits] = useState<SplitEntry[]>([
@@ -117,6 +267,7 @@ function TransactionsInner() {
   const [loading, setLoading] = useState(true)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [splitTxn, setSplitTxn] = useState<Transaction | null>(null)
+  const [editTxn, setEditTxn] = useState<Transaction | null>(null)
   const searchRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const page = parseInt(searchParams.get("page") ?? "1")
@@ -148,7 +299,7 @@ function TransactionsInner() {
   function updateParam(key: string, val: string) {
     const p = new URLSearchParams(searchParams.toString())
     if (val) p.set(key, val); else p.delete(key)
-    p.delete("page")
+    if (key !== "page") p.delete("page") // reset to page 1 only when filters change, not when paging
     router.push(`/transactions?${p}`)
   }
 
@@ -198,9 +349,27 @@ function TransactionsInner() {
   const income = data?.transactions.filter((t) => parseFloat(t.amount) > 0).reduce((s, t) => s + parseFloat(t.amount), 0) ?? 0
   const expenses = data?.transactions.filter((t) => parseFloat(t.amount) < 0).reduce((s, t) => s + Math.abs(parseFloat(t.amount)), 0) ?? 0
 
+  function handleEditSaved(updated: Transaction) {
+    setData((prev) => prev ? {
+      ...prev,
+      transactions: prev.transactions.map((t) => t.id === updated.id ? { ...t, ...updated } : t),
+    } : null)
+    setEditTxn(null)
+  }
+
+  function handleDeleted(id: string) {
+    setData((prev) => prev ? {
+      ...prev,
+      transactions: prev.transactions.filter((t) => t.id !== id),
+      total: prev.total - 1,
+    } : null)
+    setEditTxn(null)
+  }
+
   return (
     <div style={{ backgroundColor: "#0f172a" }} className="min-h-screen">
       {splitTxn && <SplitModal txn={splitTxn} onClose={() => setSplitTxn(null)} onSaved={fetchData} />}
+      {editTxn && <TransactionEditModal txn={editTxn} onClose={() => setEditTxn(null)} onSaved={handleEditSaved} onDeleted={handleDeleted} />}
       <Header />
 
       {/* Filter Bar */}
@@ -287,7 +456,12 @@ function TransactionsInner() {
                         <td className="px-3 sm:px-5 py-3 text-slate-400 text-xs whitespace-nowrap">
                           {new Date(txn.posted).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" })}
                         </td>
-                        <td className="px-3 sm:px-5 py-3 text-slate-200 max-w-[120px] sm:max-w-[200px] truncate">{txn.payee}</td>
+                        <td className="px-3 sm:px-5 py-3 max-w-[120px] sm:max-w-[200px] truncate">
+                          <button onClick={() => setEditTxn(txn)}
+                            className="text-slate-200 hover:text-emerald-400 transition-colors cursor-pointer text-left truncate w-full">
+                            {txn.payee}
+                          </button>
+                        </td>
                         <td className="hidden lg:table-cell px-5 py-3 text-slate-400 max-w-[180px] truncate text-xs">{txn.memo ?? "—"}</td>
                         <td className="hidden md:table-cell px-5 py-3"><CategoryPill category={txn.category} /></td>
                         <td className="px-3 sm:px-5 py-3 text-right whitespace-nowrap"
