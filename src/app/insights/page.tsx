@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts"
 import Header from "@/components/Header"
 import CategoryPill from "@/components/CategoryPill"
-import { CATEGORIES } from "@/lib/constants"
+import { CATEGORIES, Category } from "@/lib/constants"
 
 interface Target {
   id: number
@@ -43,7 +43,7 @@ export default function InsightsPage() {
   const [netWorth, setNetWorth] = useState<NetWorthData | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const [newCategory, setNewCategory] = useState(CATEGORIES[1])
+  const [newCategory, setNewCategory] = useState<Category>(CATEGORIES[1])
   const [newLimit, setNewLimit] = useState("")
   const [saving, setSaving] = useState(false)
 
@@ -181,7 +181,7 @@ export default function InsightsPage() {
               <form onSubmit={addTarget} className="flex flex-wrap gap-3 items-end border-t border-slate-700 pt-4">
                 <div>
                   <label className="block text-xs text-slate-400 mb-1">Category</label>
-                  <select value={newCategory} onChange={(e) => setNewCategory(e.target.value)}
+                  <select value={newCategory} onChange={(e) => setNewCategory(e.target.value as Category)}
                     className="px-3 py-2 rounded-md text-sm bg-slate-700 text-slate-200 border border-slate-600 focus:outline-none focus:border-emerald-500 cursor-pointer">
                     {CATEGORIES.filter((c) => c !== "Income").map((c) => <option key={c} value={c}>{c}</option>)}
                   </select>

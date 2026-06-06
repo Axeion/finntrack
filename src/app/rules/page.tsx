@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import Header from "@/components/Header"
 import CategoryPill from "@/components/CategoryPill"
-import { CATEGORIES } from "@/lib/constants"
+import { CATEGORIES, Category } from "@/lib/constants"
 
 interface Rule {
   id: number
@@ -17,7 +17,7 @@ export default function RulesPage() {
   const [rules, setRules] = useState<Rule[]>([])
   const [loading, setLoading] = useState(true)
   const [newPattern, setNewPattern] = useState("")
-  const [newCategory, setNewCategory] = useState(CATEGORIES[1])
+  const [newCategory, setNewCategory] = useState<Category>(CATEGORIES[1])
   const [saving, setSaving] = useState(false)
 
   async function loadRules() {
@@ -77,7 +77,7 @@ export default function RulesPage() {
               <label className="block text-xs text-slate-400 mb-1">Category</label>
               <select
                 value={newCategory}
-                onChange={(e) => setNewCategory(e.target.value)}
+                onChange={(e) => setNewCategory(e.target.value as Category)}
                 className="px-3 py-2 rounded-md text-sm bg-slate-700 text-slate-200 border border-slate-600 focus:outline-none focus:border-emerald-500 cursor-pointer"
               >
                 {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
