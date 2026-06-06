@@ -270,12 +270,12 @@ function TransactionsInner() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-slate-700">
-                    <th className="px-4 sm:px-5 py-3 text-xs text-slate-400 font-medium uppercase tracking-wide text-left">Date</th>
-                    <th className="px-4 sm:px-5 py-3 text-xs text-slate-400 font-medium uppercase tracking-wide text-left">Payee</th>
-                    <th className="hidden md:table-cell px-5 py-3 text-xs text-slate-400 font-medium uppercase tracking-wide text-left">Memo</th>
-                    <th className="hidden sm:table-cell px-5 py-3 text-xs text-slate-400 font-medium uppercase tracking-wide text-left">Category</th>
-                    <th className="px-4 sm:px-5 py-3 text-xs text-slate-400 font-medium uppercase tracking-wide text-right">Amount</th>
-                    <th className="px-4 sm:px-5 py-3 text-xs text-slate-400 font-medium uppercase tracking-wide text-right">Edit</th>
+                    <th className="px-3 sm:px-5 py-3 text-xs text-slate-400 font-medium uppercase tracking-wide text-left">Date</th>
+                    <th className="px-3 sm:px-5 py-3 text-xs text-slate-400 font-medium uppercase tracking-wide text-left">Payee</th>
+                    <th className="hidden lg:table-cell px-5 py-3 text-xs text-slate-400 font-medium uppercase tracking-wide text-left">Memo</th>
+                    <th className="hidden md:table-cell px-5 py-3 text-xs text-slate-400 font-medium uppercase tracking-wide text-left">Category</th>
+                    <th className="px-3 sm:px-5 py-3 text-xs text-slate-400 font-medium uppercase tracking-wide text-right">Amount</th>
+                    <th className="px-3 sm:px-5 py-3 text-xs text-slate-400 font-medium uppercase tracking-wide text-right">Edit</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -284,17 +284,17 @@ function TransactionsInner() {
                     return (
                       <tr key={txn.id} className="border-b border-slate-700/50 last:border-0"
                         style={{ backgroundColor: i % 2 === 1 ? "#162032" : undefined }}>
-                        <td className="px-4 sm:px-5 py-3 text-slate-400 text-xs whitespace-nowrap">
+                        <td className="px-3 sm:px-5 py-3 text-slate-400 text-xs whitespace-nowrap">
                           {new Date(txn.posted).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" })}
                         </td>
-                        <td className="px-4 sm:px-5 py-3 text-slate-200 max-w-[120px] sm:max-w-[200px] truncate">{txn.payee}</td>
-                        <td className="hidden md:table-cell px-5 py-3 text-slate-400 max-w-[180px] truncate text-xs">{txn.memo ?? "—"}</td>
-                        <td className="hidden sm:table-cell px-5 py-3"><CategoryPill category={txn.category} /></td>
-                        <td className="px-4 sm:px-5 py-3 text-right whitespace-nowrap"
+                        <td className="px-3 sm:px-5 py-3 text-slate-200 max-w-[120px] sm:max-w-[200px] truncate">{txn.payee}</td>
+                        <td className="hidden lg:table-cell px-5 py-3 text-slate-400 max-w-[180px] truncate text-xs">{txn.memo ?? "—"}</td>
+                        <td className="hidden md:table-cell px-5 py-3"><CategoryPill category={txn.category} /></td>
+                        <td className="px-3 sm:px-5 py-3 text-right whitespace-nowrap"
                           style={{ fontFamily: "var(--font-mono)", color: amount < 0 ? "#f43f5e" : "#10b981" }}>
                           {amount < 0 ? "-" : "+"}${Math.abs(amount).toFixed(2)}
                         </td>
-                        <td className="px-4 sm:px-5 py-3 text-right">
+                        <td className="px-3 sm:px-5 py-3 text-right">
                           <div className="flex items-center justify-end gap-2">
                             <select
                               value={txn.category ?? ""}
