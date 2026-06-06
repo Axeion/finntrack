@@ -37,12 +37,14 @@ function TransactionsInner() {
   const startDate = searchParams.get("startDate") ?? ""
   const endDate = searchParams.get("endDate") ?? ""
   const search = searchParams.get("search") ?? ""
+  const accountId = searchParams.get("accountId") ?? ""
 
   const fetchData = useCallback(() => {
     setLoading(true)
     const params = new URLSearchParams()
     params.set("page", String(page))
     params.set("limit", "50")
+    if (accountId) params.set("accountId", accountId)
     if (category) params.set("category", category)
     if (startDate) params.set("startDate", startDate)
     if (endDate) params.set("endDate", endDate)
@@ -52,7 +54,7 @@ function TransactionsInner() {
       .then((r) => r.json())
       .then((d) => { setData(d); setLoading(false) })
       .catch(() => setLoading(false))
-  }, [page, category, startDate, endDate, search])
+  }, [page, accountId, category, startDate, endDate, search])
 
   useEffect(() => { fetchData() }, [fetchData])
 
@@ -115,23 +117,23 @@ function TransactionsInner() {
 
       {/* Filter Bar */}
       <div className="sticky top-14 z-40 border-b border-slate-800" style={{ backgroundColor: "#0f172a" }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap gap-3 items-center">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap gap-2 items-center">
           <input
             type="date"
             defaultValue={startDate}
             onChange={(e) => updateParam("startDate", e.target.value)}
-            className="px-3 py-1.5 rounded-md text-sm bg-slate-800 text-slate-300 border border-slate-700 focus:outline-none focus:border-emerald-500"
+            className="px-2 py-1.5 rounded-md text-sm bg-slate-800 text-slate-300 border border-slate-700 focus:outline-none focus:border-emerald-500 min-w-0"
           />
           <input
             type="date"
             defaultValue={endDate}
             onChange={(e) => updateParam("endDate", e.target.value)}
-            className="px-3 py-1.5 rounded-md text-sm bg-slate-800 text-slate-300 border border-slate-700 focus:outline-none focus:border-emerald-500"
+            className="px-2 py-1.5 rounded-md text-sm bg-slate-800 text-slate-300 border border-slate-700 focus:outline-none focus:border-emerald-500 min-w-0"
           />
           <select
             defaultValue={category}
             onChange={(e) => updateParam("category", e.target.value)}
-            className="px-3 py-1.5 rounded-md text-sm bg-slate-800 text-slate-300 border border-slate-700 focus:outline-none focus:border-emerald-500"
+            className="px-2 py-1.5 rounded-md text-sm bg-slate-800 text-slate-300 border border-slate-700 focus:outline-none focus:border-emerald-500 min-w-0"
           >
             <option value="">All Categories</option>
             {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
@@ -141,13 +143,14 @@ function TransactionsInner() {
             defaultValue={search}
             placeholder="Search payee..."
             onChange={(e) => handleSearchInput(e.target.value)}
-            className="px-3 py-1.5 rounded-md text-sm bg-slate-800 text-slate-300 border border-slate-700 focus:outline-none focus:border-emerald-500 w-48"
+            className="px-2 py-1.5 rounded-md text-sm bg-slate-800 text-slate-300 border border-slate-700 focus:outline-none focus:border-emerald-500 flex-1 min-w-0"
+            style={{ minWidth: 100 }}
           />
           <button
             onClick={exportCsv}
-            className="ml-auto px-3 py-1.5 rounded-md text-sm text-slate-300 border border-slate-700 hover:bg-slate-800 transition-colors cursor-pointer"
+            className="px-3 py-1.5 rounded-md text-sm text-slate-300 border border-slate-700 hover:bg-slate-800 transition-colors cursor-pointer whitespace-nowrap"
           >
-            Export CSV
+            CSV
           </button>
         </div>
       </div>
@@ -179,12 +182,12 @@ function TransactionsInner() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-slate-700">
-                    {["Date", "Payee", "Memo", "Category", "Amount", "Edit"].map((h, i) => (
-                      <th key={h}
-                        className={`px-5 py-3 text-xs text-slate-400 font-medium uppercase tracking-wide ${i >= 4 ? "text-right" : "text-left"}`}>
-                        {h}
-                      </th>
-                    ))}
+                    <th className="px-4 sm:px-5 py-3 text-xs text-slate-400 font-medium uppercase tracking-wide text-left">Date</th>
+                    <th className="px-4 sm:px-5 py-3 text-xs text-slate-400 font-medium uppercase tracking-wide text-left">Payee</th>
+                    <th className="hidden md:table-cell px-5 py-3 text-xs text-slate-400 font-medium uppercase tracking-wide text-left">Memo</th>
+                    <th className="hidden sm:table-cell px-5 py-3 text-xs text-slate-400 font-medium uppercase tracking-wide text-left">Category</th>
+                    <th className="px-4 sm:px-5 py-3 text-xs text-slate-400 font-medium uppercase tracking-wide text-right">Amount</th>
+                    <th className="px-4 sm:px-5 py-3 text-xs text-slate-400 font-medium uppercase tracking-wide text-right">Edit</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -193,17 +196,17 @@ function TransactionsInner() {
                     return (
                       <tr key={txn.id} className="border-b border-slate-700/50 last:border-0"
                         style={{ backgroundColor: i % 2 === 1 ? "#162032" : undefined }}>
-                        <td className="px-5 py-3 text-slate-400 text-xs whitespace-nowrap">
+                        <td className="px-4 sm:px-5 py-3 text-slate-400 text-xs whitespace-nowrap">
                           {new Date(txn.posted).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" })}
                         </td>
-                        <td className="px-5 py-3 text-slate-200 max-w-[200px] truncate">{txn.payee}</td>
-                        <td className="px-5 py-3 text-slate-400 max-w-[180px] truncate text-xs">{txn.memo ?? "—"}</td>
-                        <td className="px-5 py-3"><CategoryPill category={txn.category} /></td>
-                        <td className="px-5 py-3 text-right whitespace-nowrap"
+                        <td className="px-4 sm:px-5 py-3 text-slate-200 max-w-[120px] sm:max-w-[200px] truncate">{txn.payee}</td>
+                        <td className="hidden md:table-cell px-5 py-3 text-slate-400 max-w-[180px] truncate text-xs">{txn.memo ?? "—"}</td>
+                        <td className="hidden sm:table-cell px-5 py-3"><CategoryPill category={txn.category} /></td>
+                        <td className="px-4 sm:px-5 py-3 text-right whitespace-nowrap"
                           style={{ fontFamily: "var(--font-mono)", color: amount < 0 ? "#f43f5e" : "#10b981" }}>
                           {amount < 0 ? "-" : "+"}${Math.abs(amount).toFixed(2)}
                         </td>
-                        <td className="px-5 py-3 text-right">
+                        <td className="px-4 sm:px-5 py-3 text-right">
                           <select
                             value={txn.category ?? ""}
                             disabled={editingId === txn.id}

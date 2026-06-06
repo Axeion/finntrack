@@ -12,8 +12,10 @@ export async function GET(req: NextRequest) {
   const startDate = params.get("startDate")
   const endDate = params.get("endDate")
   const search = params.get("search")
+  const accountId = params.get("accountId")
 
   const conditions = []
+  if (accountId) conditions.push(sql`${transactions.account_id} = ${accountId}`)
   if (category) conditions.push(sql`${transactions.category} = ${category}`)
   if (startDate) conditions.push(sql`${transactions.posted} >= ${new Date(startDate).toISOString()}`)
   if (endDate) conditions.push(sql`${transactions.posted} <= ${new Date(endDate).toISOString()}`)
