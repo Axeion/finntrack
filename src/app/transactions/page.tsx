@@ -16,6 +16,92 @@ interface Transaction {
   posted: string
 }
 
+interface SplitEntry { category: string; amount: string; note: string }
+
+function SplitModal({ txn, onClose, onSaved }: { txn: Transaction; onClose: () => void; onSaved: () => void }) {
+  const total = Math.abs(parseFloat(txn.amount))
+  const [splits, setSplits] = useState<SplitEntry[]>([
+    { category: txn.category ?? CATEGORIES[0], amount: (total / 2).toFixed(2), note: "" },
+    { category: CATEGORIES[1], amount: (total / 2).toFixed(2), note: "" },
+  ])
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const splitsTotal = splits.reduce((s, sp) => s + (parseFloat(sp.amount) || 0), 0)
+  const remaining = total - splitsTotal
+
+  function updateSplit(i: number, field: keyof SplitEntry, val: string) {
+    setSplits((prev) => prev.map((s, idx) => idx === i ? { ...s, [field]: val } : s))
+  }
+
+  function addRow() {
+    setSplits((prev) => [...prev, { category: CATEGORIES[1], amount: Math.max(0, remaining).toFixed(2), note: "" }])
+  }
+
+  async function save() {
+    if (Math.abs(remaining) > 0.01) { setError(`Splits must sum to $${total.toFixed(2)} (off by $${Math.abs(remaining).toFixed(2)})`); return }
+    setSaving(true); setError(null)
+    const res = await fetch(`/api/transactions/${txn.id}/splits`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ splits: splits.map((s) => ({ category: s.category, amount: parseFloat(s.amount), note: s.note || undefined })) }),
+    })
+    if (!res.ok) { const d = await res.json(); setError(d.error); setSaving(false); return }
+    onSaved(); onClose()
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: "rgba(0,0,0,0.7)" }}>
+      <div className="rounded-xl p-6 w-full max-w-lg space-y-4" style={{ backgroundColor: "#1e293b" }}>
+        <div className="flex items-start justify-between">
+          <div>
+            <h2 className="text-sm font-semibold text-white">Split Transaction</h2>
+            <p className="text-xs text-slate-400 mt-0.5">{txn.payee} — ${total.toFixed(2)}</p>
+          </div>
+          <button onClick={onClose} className="text-slate-500 hover:text-white cursor-pointer text-lg leading-none">×</button>
+        </div>
+
+        <div className="space-y-2">
+          {splits.map((s, i) => (
+            <div key={i} className="flex gap-2 items-center">
+              <select value={s.category} onChange={(e) => updateSplit(i, "category", e.target.value)}
+                className="flex-1 px-2 py-1.5 rounded text-xs bg-slate-700 text-slate-200 border border-slate-600 focus:outline-none focus:border-emerald-500 cursor-pointer">
+                {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <input type="number" min="0" step="0.01" value={s.amount} onChange={(e) => updateSplit(i, "amount", e.target.value)}
+                className="w-24 px-2 py-1.5 rounded text-xs bg-slate-700 text-slate-200 border border-slate-600 focus:outline-none focus:border-emerald-500" />
+              <input placeholder="Note" value={s.note} onChange={(e) => updateSplit(i, "note", e.target.value)}
+                className="flex-1 px-2 py-1.5 rounded text-xs bg-slate-700 text-slate-200 border border-slate-600 focus:outline-none focus:border-emerald-500 hidden sm:block" />
+              {splits.length > 2 && (
+                <button onClick={() => setSplits((prev) => prev.filter((_, idx) => idx !== i))}
+                  className="text-slate-500 hover:text-red-400 cursor-pointer">×</button>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <div className="flex items-center justify-between text-xs">
+          <button onClick={addRow} className="text-emerald-400 hover:text-emerald-300 cursor-pointer">+ Add row</button>
+          <span style={{ color: Math.abs(remaining) < 0.01 ? "#10b981" : "#f43f5e", fontFamily: "var(--font-mono)" }}>
+            Remaining: ${remaining.toFixed(2)}
+          </span>
+        </div>
+
+        {error && <p className="text-xs text-red-400">{error}</p>}
+
+        <div className="flex gap-3 justify-end pt-2">
+          <button onClick={onClose} className="px-4 py-2 text-sm text-slate-400 hover:text-white cursor-pointer">Cancel</button>
+          <button onClick={save} disabled={saving || Math.abs(remaining) > 0.01}
+            className="px-4 py-2 rounded-md text-sm text-white font-medium disabled:opacity-50 cursor-pointer"
+            style={{ backgroundColor: "#10b981" }}>
+            {saving ? "Saving…" : "Save Split"}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 interface ApiResponse {
   transactions: Transaction[]
   total: number
@@ -30,6 +116,7 @@ function TransactionsInner() {
   const [data, setData] = useState<ApiResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [splitTxn, setSplitTxn] = useState<Transaction | null>(null)
   const searchRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const page = parseInt(searchParams.get("page") ?? "1")
@@ -113,6 +200,7 @@ function TransactionsInner() {
 
   return (
     <div style={{ backgroundColor: "#0f172a" }} className="min-h-screen">
+      {splitTxn && <SplitModal txn={splitTxn} onClose={() => setSplitTxn(null)} onSaved={fetchData} />}
       <Header />
 
       {/* Filter Bar */}
@@ -207,15 +295,26 @@ function TransactionsInner() {
                           {amount < 0 ? "-" : "+"}${Math.abs(amount).toFixed(2)}
                         </td>
                         <td className="px-4 sm:px-5 py-3 text-right">
-                          <select
-                            value={txn.category ?? ""}
-                            disabled={editingId === txn.id}
-                            onChange={(e) => handleRecategorize(txn.id, e.target.value)}
-                            className="text-xs px-2 py-1 rounded bg-slate-700 text-slate-300 border border-slate-600 focus:outline-none focus:border-emerald-500 cursor-pointer"
-                          >
-                            <option value="">— edit —</option>
-                            {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                          </select>
+                          <div className="flex items-center justify-end gap-2">
+                            <select
+                              value={txn.category ?? ""}
+                              disabled={editingId === txn.id}
+                              onChange={(e) => handleRecategorize(txn.id, e.target.value)}
+                              className="text-xs px-2 py-1 rounded bg-slate-700 text-slate-300 border border-slate-600 focus:outline-none focus:border-emerald-500 cursor-pointer"
+                            >
+                              <option value="">— edit —</option>
+                              {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                            </select>
+                            {parseFloat(txn.amount) < 0 && (
+                              <button
+                                onClick={() => setSplitTxn(txn)}
+                                className="text-xs text-slate-500 hover:text-emerald-400 transition-colors cursor-pointer whitespace-nowrap"
+                                title="Split this transaction across categories"
+                              >
+                                Split
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     )

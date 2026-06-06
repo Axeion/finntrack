@@ -90,10 +90,13 @@ export default function Header({ lastSync, onSyncComplete }: HeaderProps) {
           </span>
         </div>
 
-        <nav className="flex items-center gap-1">
+        <nav className="flex items-center gap-0.5 sm:gap-1">
           {navLink("/", "Dashboard")}
           {navLink("/transactions", "Transactions")}
+          {navLink("/reports", "Reports")}
+          {navLink("/insights", "Insights")}
           {navLink("/bills", "Bills")}
+          {navLink("/rules", "Rules")}
         </nav>
 
         <div className="flex items-center gap-3">

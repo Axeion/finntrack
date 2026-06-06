@@ -1,7 +1,6 @@
 import { db } from "@/db"
-import { transactions } from "@/db/schema"
-import { isNull } from "drizzle-orm"
-import { eq } from "drizzle-orm"
+import { transactions, categorization_rules } from "@/db/schema"
+import { isNull, eq, desc, sql } from "drizzle-orm"
 import { CATEGORIES } from "./constants"
 
 // Rule-based keyword categorizer — runs instantly, no external calls
@@ -118,16 +117,34 @@ async function ollamaCategorize(
   }
 }
 
+async function userRulesCategorize(payee: string): Promise<{ category: string; confidence: number } | null> {
+  const rules = await db.select()
+    .from(categorization_rules)
+    .where(sql`${categorization_rules.is_active} = true`)
+    .orderBy(desc(categorization_rules.priority))
+
+  for (const rule of rules) {
+    if (payee.toLowerCase().includes(rule.payee_pattern.toLowerCase())) {
+      return { category: rule.category, confidence: 1.0 }
+    }
+  }
+  return null
+}
+
 export async function categorizeTransaction(
   payee: string,
   amount: number,
   memo?: string
 ): Promise<{ category: string; confidence: number }> {
-  // Try rules first — instant, no network call
+  // 1. User-defined rules — highest priority
+  const userRule = await userRulesCategorize(payee)
+  if (userRule) return userRule
+
+  // 2. Built-in keyword rules — instant, no network call
   const ruleResult = ruleBasedCategorize(payee, amount)
   if (ruleResult) return ruleResult
 
-  // Fall back to Ollama for unmatched transactions
+  // 3. Ollama fallback for unmatched transactions
   return ollamaCategorize(payee, amount, memo)
 }
 

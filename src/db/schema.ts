@@ -1,4 +1,4 @@
-import { pgTable, varchar, numeric, timestamp, boolean, integer, text, serial } from "drizzle-orm/pg-core"
+import { pgTable, varchar, numeric, timestamp, boolean, integer, text, serial, jsonb } from "drizzle-orm/pg-core"
 
 export const accounts = pgTable("accounts", {
   id: varchar("id").primaryKey(),
@@ -21,9 +21,21 @@ export const transactions = pgTable("transactions", {
   category: varchar("category"),
   category_confidence: numeric("category_confidence"),
   is_pending: boolean("is_pending").default(false),
+  is_recurring: boolean("is_recurring").default(false),
+  recurring_period: varchar("recurring_period"), // 'weekly' | 'monthly' | 'yearly'
   raw_description: varchar("raw_description").notNull(),
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at").defaultNow(),
+})
+
+// Splits for a single transaction across multiple categories
+export const transaction_splits = pgTable("transaction_splits", {
+  id: serial("id").primaryKey(),
+  transaction_id: varchar("transaction_id").references(() => transactions.id).notNull(),
+  category: varchar("category").notNull(),
+  amount: numeric("amount").notNull(),
+  note: varchar("note"),
+  created_at: timestamp("created_at").defaultNow(),
 })
 
 export const bills = pgTable("bills", {
@@ -47,6 +59,36 @@ export const bill_payments = pgTable("bill_payments", {
   paid_date: timestamp("paid_date").notNull(),
   paid_amount: numeric("paid_amount").notNull(),
   month: varchar("month").notNull(),
+  created_at: timestamp("created_at").defaultNow(),
+})
+
+// Auto-categorization rules: if payee matches pattern, apply category
+export const categorization_rules = pgTable("categorization_rules", {
+  id: serial("id").primaryKey(),
+  payee_pattern: varchar("payee_pattern").notNull(), // substring match, case-insensitive
+  category: varchar("category").notNull(),
+  priority: integer("priority").default(0), // higher = checked first
+  is_active: boolean("is_active").default(true),
+  created_at: timestamp("created_at").defaultNow(),
+})
+
+// Soft spending targets per category per month
+export const spending_targets = pgTable("spending_targets", {
+  id: serial("id").primaryKey(),
+  category: varchar("category").notNull().unique(),
+  monthly_limit: numeric("monthly_limit").notNull(),
+  is_active: boolean("is_active").default(true),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+})
+
+// Monthly net worth snapshots for trend tracking
+export const net_worth_snapshots = pgTable("net_worth_snapshots", {
+  id: serial("id").primaryKey(),
+  snapshot_date: timestamp("snapshot_date").notNull(),
+  month: varchar("month").notNull().unique(), // 'YYYY-MM'
+  total_assets: numeric("total_assets").notNull(),
+  account_balances: jsonb("account_balances").notNull(), // { accountId: balance }
   created_at: timestamp("created_at").defaultNow(),
 })
 

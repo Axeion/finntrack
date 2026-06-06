@@ -54,5 +54,14 @@ function scheduleCronJobs() {
     callCron("/api/cron/weekly-email")
   })
 
-  console.log("[cron] Jobs scheduled: sync (hourly), categorize (30min), daily email (8am), weekly email (Mon 8am)")
+  // Net worth snapshot on 1st of each month
+  cron.schedule("0 9 1 * *", () => {
+    console.log("[cron] Saving net worth snapshot")
+    fetch(`http://localhost:${port}/api/networth`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    }).catch((err) => console.error("[cron] Net worth snapshot failed:", err.message))
+  })
+
+  console.log("[cron] Jobs scheduled: sync (hourly), categorize (30min), daily/weekly email, net worth (1st of month)")
 }
