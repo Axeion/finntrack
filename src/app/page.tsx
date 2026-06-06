@@ -62,12 +62,18 @@ function Skeleton({ h = "h-6", w = "w-full" }: { h?: string; w?: string }) {
 export default function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   function loadData() {
+    setLoading(true)
+    setError(null)
     fetch("/api/dashboard")
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`)
+        return r.json()
+      })
       .then((d) => { setData(d); setLoading(false) })
-      .catch(() => setLoading(false))
+      .catch((e) => { setError(e.message); setLoading(false) })
   }
 
   useEffect(() => { loadData() }, [])
@@ -87,6 +93,22 @@ export default function Dashboard() {
           </div>
           <Skeleton h="h-64" />
         </main>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div style={{ backgroundColor: "#0f172a" }} className="min-h-screen">
+        <Header />
+        <div className="max-w-7xl mx-auto px-4 py-16 text-center">
+          <div className="text-4xl mb-4">⚠️</div>
+          <div className="text-slate-300 text-lg mb-2">Failed to load dashboard</div>
+          <div className="text-slate-500 text-sm mb-6" style={{ fontFamily: "var(--font-mono)" }}>{error}</div>
+          <button onClick={loadData} className="px-4 py-2 rounded-lg text-sm text-white cursor-pointer" style={{ backgroundColor: "#10b981" }}>
+            Retry
+          </button>
+        </div>
       </div>
     )
   }
